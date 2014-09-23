@@ -1,6 +1,6 @@
 StyleCopAutoFix
 ===============
-This console application automatically fix common StyleCop violations related to missing (or unnecessary) blank/empty lines : SA1516, SA1507, SA1508, SA1518, SA1505.
+This console application automatically fix common StyleCop violations related to missing (or unnecessary) blank/empty lines : SA1516, SA1507, SA1508, SA1518, SA1505, SA1515 and SA1513.
 
 It only apply fixes for the violations listed above, these are the only ones I found which are safe and easy to fix (it is unlikely that fixes will broke the code).
 
