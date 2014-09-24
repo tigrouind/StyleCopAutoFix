@@ -1,4 +1,3 @@
-﻿using StyleCop;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -6,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using StyleCop;
 
 namespace StyleCopAutoFix
 {
@@ -31,6 +31,7 @@ namespace StyleCopAutoFix
 				FixStyleCopRule(args[0], rule, countViolations);
 				countViolations = false;
 			}
+
 			Console.WriteLine("StyleCop violations found : {0}", totalViolationsFound);
 			Console.WriteLine("StyleCop violations fixed : {0}", totalViolationsFixed);
 			Console.WriteLine("Press any key to continue...");
@@ -52,25 +53,27 @@ namespace StyleCopAutoFix
 				if (console.Core.Environment.AddSourceCode(project, filePath, null))
 				{
 					console.ViolationEncountered += (sender, e) =>
-					{						
+					{
 						if (e.Violation.Rule.CheckId == rule)
 						{
 							FixStyleCopViolation(sourceCode, e);
+							Console.WriteLine("{0}({1}): {2}", rule, e.LineNumber, filePath);
 							totalViolationsFixed++;
 							fileHasBeenFixed = true;
 						}
+
 						if(countViolations)
 						{
 							totalViolationsFound++;
 						}
-						//Console.WriteLine("{2} {0}: {1}", e.Violation.Rule.CheckId, e.Message, e.LineNumber);
+						
+						//Console.WriteLine("{2} {0}: {1}", e.Violation.Rule.CheckId, e.Message, e.LineNumber);										
 					};
 					console.Start(new[] { project }, true);
 				}
 
 				if (fileHasBeenFixed)
 				{
-					Console.WriteLine("{0}: {1}", rule, filePath);
 					File.WriteAllText(filePath, string.Join(Environment.NewLine, sourceCode.Select(x => x.Item2)));
 				}
 			}
@@ -113,7 +116,7 @@ namespace StyleCopAutoFix
 		}
 
 		private static void FixStyleCopViolation(List<Tuple<int, string>> sourceCode, ViolationEventArgs e)
-		{			
+		{
 			switch (e.Violation.Rule.CheckId)
 			{
 				//ElementsMustBeSeparatedByBlankLine
@@ -154,7 +157,7 @@ namespace StyleCopAutoFix
 				case "SA1515":
 					sourceCode.Insert(sourceCode.FindIndex(x => x.Item1 == e.LineNumber), new Tuple<int, string>(-1, string.Empty));
 					break;
-					
+
 				default:
 					throw new NotImplementedException();
 			}					
