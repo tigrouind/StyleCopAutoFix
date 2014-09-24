@@ -20,7 +20,7 @@ namespace StyleCopAutoFix
 		{
 			if (args.Length == 0)
 			{
-				Console.WriteLine("USAGE: StyleCopAutoFix sln_filepath or StyleCopAutoFix csproj_filepath");
+				Console.WriteLine("USAGE: StyleCopAutoFix sln_filepath|csproj_filepath|cs_filepath");
 				return;
 			}
 
@@ -63,7 +63,6 @@ namespace StyleCopAutoFix
 					Console.WriteLine("{0}: {1}", currentRule, filePath);
 					File.WriteAllText(filePath, string.Join(Environment.NewLine, sourceCode.Select(x => x.Item2)));
 				}
-
 			}
 		}
 
@@ -76,6 +75,9 @@ namespace StyleCopAutoFix
 
 				case ".csproj":
 					return GetCSharpFilesInProject(filePath);
+					
+				case ".cs":
+					return new string[] { filePath };
 
 				default:
 					throw new Exception("Invalid command line argument: " + filePath);
@@ -113,7 +115,7 @@ namespace StyleCopAutoFix
 						totalViolationsFixed++;
 						break;
 
-					//CodeMustNotContainMultipleBlankLinesInARow				
+					//CodeMustNotContainMultipleBlankLinesInARow
 					case "SA1507":
 						Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == e.LineNumber)].Item2.Trim()));
 						sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == e.LineNumber));
