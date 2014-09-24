@@ -10,12 +10,9 @@ using System.Xml.Linq;
 namespace StyleCopAutoFix
 {
 	class Program
-	{
-		static bool fileHasBeenFixed;
-		static List<Tuple<int, string>> sourceCode;
-		static string currentRule;
+	{		
 		static int totalViolationsFound, totalViolationsFixed;
-
+		
 		static void Main(string[] args)
 		{
 			if (args.Length == 0)
@@ -28,9 +25,11 @@ namespace StyleCopAutoFix
 			//same line number can be reported several times by StyleCop (but for different rules), it is important to fix rules one by one.
 			string[] rules = new string[] { "SA1516", "SA1507", "SA1508", "SA1518", "SA1505", "SA1513", "SA1515" };
 
+			bool countViolations = true;
 			foreach (string rule in rules)
 			{
-				FixStyleCopRule(args[0], rule);
+				FixStyleCopRule(args[0], rule, countViolations);
+				countViolations = false;
 			}
 			Console.WriteLine("StyleCop violations found : {0}", totalViolationsFound);
 			Console.WriteLine("StyleCop violations fixed : {0}", totalViolationsFixed);
@@ -38,29 +37,40 @@ namespace StyleCopAutoFix
 			Console.ReadKey();
 		}
 
-		private static void FixStyleCopRule(string solutionFullPath, string rule)
+		private static void FixStyleCopRule(string projectFilePath, string rule, bool countViolations)
 		{
-			foreach (string filePath in GetCSharpFiles(solutionFullPath))
+			foreach (string filePath in GetCSharpFiles(projectFilePath))
 			{
 				StyleCopConsole console = new StyleCopConsole(null, false, null, null, true);
 
-				CodeProject project = new CodeProject(0, Path.GetDirectoryName(solutionFullPath), new Configuration(null));
+				CodeProject project = new CodeProject(0, Path.GetDirectoryName(projectFilePath), new Configuration(null));
 
-				currentRule = rule;
-				fileHasBeenFixed = false;
-				sourceCode = File.ReadAllText(filePath).Split(new string[] { "\r\n", "\n", "\r" }, StringSplitOptions.None)
+				bool fileHasBeenFixed = false;
+				List<Tuple<int, string>> sourceCode = File.ReadAllText(filePath).Split(new string[] { "\r\n", "\n", "\r" }, StringSplitOptions.None)
 					.Select((line, index) => new Tuple<int, string>(index + 1, line)).ToList();
-
+							
 				if (console.Core.Environment.AddSourceCode(project, filePath, null))
 				{
-					console.ViolationEncountered += OnViolationEncountered;
+					console.ViolationEncountered += (sender, e) =>
+					{						
+						if (e.Violation.Rule.CheckId == rule)
+						{
+							FixStyleCopViolation(sourceCode, e);
+							totalViolationsFixed++;
+							fileHasBeenFixed = true;
+						}
+						if(countViolations)
+						{
+							totalViolationsFound++;
+						}
+						//Console.WriteLine("{2} {0}: {1}", e.Violation.Rule.CheckId, e.Message, e.LineNumber);
+					};
 					console.Start(new[] { project }, true);
-					console.ViolationEncountered -= OnViolationEncountered;
 				}
 
 				if (fileHasBeenFixed)
 				{
-					Console.WriteLine("{0}: {1}", currentRule, filePath);
+					Console.WriteLine("{0}: {1}", rule, filePath);
 					File.WriteAllText(filePath, string.Join(Environment.NewLine, sourceCode.Select(x => x.Item2)));
 				}
 			}
@@ -102,68 +112,52 @@ namespace StyleCopAutoFix
 			 select Path.Combine(directoryName, el.Attribute("Include").Value);
 		}
 
-		static void OnViolationEncountered(object sender, ViolationEventArgs e)
-		{
-			if (e.Violation.Rule.CheckId == currentRule)
+		private static void FixStyleCopViolation(List<Tuple<int, string>> sourceCode, ViolationEventArgs e)
+		{			
+			switch (e.Violation.Rule.CheckId)
 			{
-				switch (e.Violation.Rule.CheckId)
-				{
-					//ElementsMustBeSeparatedByBlankLine
-					case "SA1516":
-						sourceCode.Insert(sourceCode.FindIndex(x => x.Item1 == e.LineNumber), new Tuple<int, string>(-1, string.Empty));
-						fileHasBeenFixed = true;
-						totalViolationsFixed++;
-						break;
+				//ElementsMustBeSeparatedByBlankLine
+				case "SA1516":
+					sourceCode.Insert(sourceCode.FindIndex(x => x.Item1 == e.LineNumber), new Tuple<int, string>(-1, string.Empty));
+					break;
 
-					//CodeMustNotContainMultipleBlankLinesInARow
-					case "SA1507":
-						Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == e.LineNumber)].Item2.Trim()));
-						sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == e.LineNumber));
-						fileHasBeenFixed = true;
-						totalViolationsFixed++;
-						break;
+				//CodeMustNotContainMultipleBlankLinesInARow
+				case "SA1507":
+					Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == e.LineNumber)].Item2.Trim()));
+					sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == e.LineNumber));
+					break;
 
-					//ClosingCurlyBracketsMustNotBePrecededByBlankLine
-					case "SA1508":
-						Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == e.LineNumber - 1)].Item2.Trim()));
-						sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == e.LineNumber - 1));
-						fileHasBeenFixed = true;
-						totalViolationsFixed++;
-						break;
+				//ClosingCurlyBracketsMustNotBePrecededByBlankLine
+				case "SA1508":
+					Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == e.LineNumber - 1)].Item2.Trim()));
+					sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == e.LineNumber - 1));
+					break;
 
-					//CodeMustNotContainBlankLinesAtEndOfFile
-					case "SA1518":
-						Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == e.LineNumber)].Item2.Trim()));
-						sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == e.LineNumber));
-						fileHasBeenFixed = true;
-						totalViolationsFixed++;
-						break;
+				//CodeMustNotContainBlankLinesAtEndOfFile
+				case "SA1518":
+					Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == e.LineNumber)].Item2.Trim()));
+					sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == e.LineNumber));
+					break;
 
-					//OpeningCurlyBracketsMustNotBeFollowedByBlankLine
-					case "SA1505":
-						Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == e.LineNumber + 1)].Item2.Trim()));
-						sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == e.LineNumber + 1));
-						fileHasBeenFixed = true;
-						totalViolationsFixed++;
-						break;
+				//OpeningCurlyBracketsMustNotBeFollowedByBlankLine
+				case "SA1505":
+					Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == e.LineNumber + 1)].Item2.Trim()));
+					sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == e.LineNumber + 1));
+					break;
 
-					//ClosingCurlyBracketMustBeFollowedByBlankLine
-					case "SA1513":
-						sourceCode.Insert(sourceCode.FindIndex(x => x.Item1 == e.LineNumber + 1), new Tuple<int, string>(-1, string.Empty));
-						fileHasBeenFixed = true;
-						totalViolationsFixed++;
-						break;
+				//ClosingCurlyBracketMustBeFollowedByBlankLine
+				case "SA1513":
+					sourceCode.Insert(sourceCode.FindIndex(x => x.Item1 == e.LineNumber + 1), new Tuple<int, string>(-1, string.Empty));
+					break;
 
-					//SingleLineCommentsMustBePrecededByBlankLine
-					case "SA1515":
-						sourceCode.Insert(sourceCode.FindIndex(x => x.Item1 == e.LineNumber), new Tuple<int, string>(-1, string.Empty));
-						fileHasBeenFixed = true;
-						totalViolationsFixed++;
-						break;
-				}
-			}
-			totalViolationsFound++;
-			//Console.WriteLine("{2} {0}: {1}", e.Violation.Rule.CheckId, e.Message, e.LineNumber);
+				//SingleLineCommentsMustBePrecededByBlankLine
+				case "SA1515":
+					sourceCode.Insert(sourceCode.FindIndex(x => x.Item1 == e.LineNumber), new Tuple<int, string>(-1, string.Empty));
+					break;
+					
+				default:
+					throw new NotImplementedException();
+			}					
 		}
 	}
 }
