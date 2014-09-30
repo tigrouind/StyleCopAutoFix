@@ -1,8 +1,8 @@
 StyleCopAutoFix
 ===============
-This console application automatically fix common StyleCop violations related to missing (or unnecessary) blank/empty lines : SA1516, SA1507, SA1508, SA1518, SA1505, SA1515 and SA1513.
+This console application automatically fix common StyleCop violations related to missing (or unnecessary) blank/empty lines : SA1505, SA1507, SA1508, SA1513, SA1514, SA1515, SA1516 and SA1518.
 
-It only apply fixes for the violations listed above, these are the only ones I found which are safe and easy to fix (it is unlikely that fixes will broke the code).
+It only apply fixes for the violations listed above, these are the only ones I found which are safe and easy to fix (it is unlikely that these fixes will broke the code).
 
 Usage : StyleCopAutoFix sln_filepath|csproj_filepath|cs_filepath
      

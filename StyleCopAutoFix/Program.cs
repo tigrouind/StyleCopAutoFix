@@ -23,7 +23,7 @@ namespace StyleCopAutoFix
 
 			//fix rules one by one 
 			//same line number can be reported several times by StyleCop (but for different rules), it is important to fix rules one by one.
-			string[] rules = new string[] { "SA1516", "SA1507", "SA1508", "SA1518", "SA1505", "SA1513", "SA1515" };
+			string[] rules = new string[] { "SA1514", "SA1516", "SA1507", "SA1508", "SA1518", "SA1505", "SA1513", "SA1515" };
 
 			bool countViolations = true;
 			foreach (string rule in rules)
@@ -47,6 +47,7 @@ namespace StyleCopAutoFix
 				CodeProject project = new CodeProject(0, Path.GetDirectoryName(projectFilePath), new Configuration(null));
 
 				bool fileHasBeenFixed = false;
+
 				List<Tuple<int, string>> sourceCode = File.ReadAllText(filePath).Split(new string[] { "\r\n", "\n", "\r" }, StringSplitOptions.None)
 					.Select((line, index) => new Tuple<int, string>(index + 1, line)).ToList();
 							
@@ -74,7 +75,13 @@ namespace StyleCopAutoFix
 
 				if (fileHasBeenFixed)
 				{
-					File.WriteAllText(filePath, string.Join(Environment.NewLine, sourceCode.Select(x => x.Item2)));
+					//preserve encoding 
+					System.Text.Encoding encoding;
+					using (StreamReader reader = new StreamReader(filePath, true))
+					{
+						encoding = reader.CurrentEncoding;
+					}
+					File.WriteAllText(filePath, string.Join(Environment.NewLine, sourceCode.Select(x => x.Item2)), encoding);
 				}
 			}
 		}
@@ -155,6 +162,11 @@ namespace StyleCopAutoFix
 
 				//SingleLineCommentsMustBePrecededByBlankLine
 				case "SA1515":
+					sourceCode.Insert(sourceCode.FindIndex(x => x.Item1 == e.LineNumber), new Tuple<int, string>(-1, string.Empty));
+					break;
+
+				//ElementDocumentationHeadersMustBePrecededByBlankLine
+				case "SA1514":
 					sourceCode.Insert(sourceCode.FindIndex(x => x.Item1 == e.LineNumber), new Tuple<int, string>(-1, string.Empty));
 					break;
 
