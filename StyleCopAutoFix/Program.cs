@@ -23,7 +23,7 @@ namespace StyleCopAutoFix
 
 			//fix rules one by one 
 			//same line number can be reported several times by StyleCop (but for different rules), it is important to fix rules one by one.
-			string[] rules = new string[] { "SA1514", "SA1516", "SA1507", "SA1508", "SA1518", "SA1505", "SA1513", "SA1515" };
+			string[] rules = new string[] { "SA1514", "SA1512", "SA1516", "SA1507", "SA1508", "SA1518", "SA1505", "SA1513", "SA1515", "SA1517" };
 
 			bool countViolations = true;
 			foreach (string rule in rules)
@@ -168,6 +168,18 @@ namespace StyleCopAutoFix
 				//ElementDocumentationHeadersMustBePrecededByBlankLine
 				case "SA1514":
 					sourceCode.Insert(sourceCode.FindIndex(x => x.Item1 == e.LineNumber), new Tuple<int, string>(-1, string.Empty));
+					break;
+
+				//SingleLineCommentsMustNotBeFollowedByBlankLine
+				case "SA1512":
+					Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == e.LineNumber + 1)].Item2.Trim()));
+					sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == e.LineNumber + 1));
+					break;
+
+				//CodeMustNotContainBlankLinesAtStartOfFile
+				case "SA1517":
+					Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == e.LineNumber)].Item2.Trim()));
+					sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == e.LineNumber));
 					break;
 
 				default:
