@@ -10,9 +10,7 @@ using StyleCop;
 namespace StyleCopAutoFix
 {
 	class Program
-	{		
-		static int totalViolationsFound, totalViolationsFixed;
-		
+	{
 		static void Main(string[] args)
 		{
 			if (args.Length == 0)
@@ -21,14 +19,26 @@ namespace StyleCopAutoFix
 				return;
 			}
 
-			//fix rules one by one 
+			//fix rules one by one
 			//same line number can be reported several times by StyleCop (but for different rules), it is important to fix rules one by one.
 			string[] rules = new string[] { "SA1514", "SA1512", "SA1516", "SA1507", "SA1508", "SA1518", "SA1505", "SA1513", "SA1515", "SA1517" };
+			int totalViolationsFound = 0, totalViolationsFixed = 0;
 
 			bool countViolations = true;
 			foreach (string rule in rules)
 			{
-				FixStyleCopRule(args[0], rule, countViolations);
+				FixStyleCopRule(args[0], rule, (sender, e) =>
+				{
+					if(countViolations)
+					{
+						totalViolationsFound++;
+					}
+
+					if (e.Violation.Rule.CheckId == rule)
+					{
+						totalViolationsFixed++;
+					}
+				});
 				countViolations = false;
 			}
 
@@ -38,7 +48,7 @@ namespace StyleCopAutoFix
 			Console.ReadKey();
 		}
 
-		private static void FixStyleCopRule(string projectFilePath, string rule, bool countViolations)
+		private static void FixStyleCopRule(string projectFilePath, string rule, EventHandler<ViolationEventArgs> onViolationEncountered)
 		{
 			foreach (string filePath in GetCSharpFiles(projectFilePath))
 			{
@@ -50,37 +60,31 @@ namespace StyleCopAutoFix
 
 				List<Tuple<int, string>> sourceCode = File.ReadAllText(filePath).Split(new string[] { "\r\n", "\n", "\r" }, StringSplitOptions.None)
 					.Select((line, index) => new Tuple<int, string>(index + 1, line)).ToList();
-							
+
 				if (console.Core.Environment.AddSourceCode(project, filePath, null))
 				{
+					console.ViolationEncountered += onViolationEncountered;
 					console.ViolationEncountered += (sender, e) =>
 					{
 						if (e.Violation.Rule.CheckId == rule)
 						{
 							FixStyleCopViolation(sourceCode, e);
 							Console.WriteLine("{0}({1}): {2}", rule, e.LineNumber, filePath);
-							totalViolationsFixed++;
 							fileHasBeenFixed = true;
 						}
-
-						if(countViolations)
-						{
-							totalViolationsFound++;
-						}
-						
-						//Console.WriteLine("{2} {0}: {1}", e.Violation.Rule.CheckId, e.Message, e.LineNumber);										
 					};
 					console.Start(new[] { project }, true);
 				}
 
 				if (fileHasBeenFixed)
 				{
-					//preserve encoding 
+					//preserve text encoding
 					System.Text.Encoding encoding;
 					using (StreamReader reader = new StreamReader(filePath, true))
 					{
 						encoding = reader.CurrentEncoding;
 					}
+
 					File.WriteAllText(filePath, string.Join(Environment.NewLine, sourceCode.Select(x => x.Item2)), encoding);
 				}
 			}
@@ -95,7 +99,7 @@ namespace StyleCopAutoFix
 
 				case ".csproj":
 					return GetCSharpFilesInProject(filePath);
-					
+
 				case ".cs":
 					return new string[] { filePath };
 
@@ -184,7 +188,7 @@ namespace StyleCopAutoFix
 
 				default:
 					throw new NotImplementedException();
-			}					
+			}
 		}
 	}
 }
