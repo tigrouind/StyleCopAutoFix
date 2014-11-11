@@ -126,64 +126,69 @@ namespace StyleCopAutoFix
 			 select Path.Combine(directoryName, el.Attribute("Include").Value);
 		}
 
+		private static void AddEmptyLine(List<Tuple<int, string>> sourceCode, int lineNumber)
+		{
+			sourceCode.Insert(sourceCode.FindIndex(x => x.Item1 == lineNumber), new Tuple<int, string>(-1, string.Empty));
+		}
+		
+		private static void RemoveEmptyLine(List<Tuple<int, string>> sourceCode, int lineNumber)
+		{
+			Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == lineNumber)].Item2.Trim()));
+			sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == lineNumber));
+		}
+
 		private static void FixStyleCopViolation(List<Tuple<int, string>> sourceCode, ViolationEventArgs e)
 		{
 			switch (e.Violation.Rule.CheckId)
 			{
 				//ElementsMustBeSeparatedByBlankLine
 				case "SA1516":
-					sourceCode.Insert(sourceCode.FindIndex(x => x.Item1 == e.LineNumber), new Tuple<int, string>(-1, string.Empty));
+					AddEmptyLine(sourceCode, e.LineNumber);
 					break;
 
 				//CodeMustNotContainMultipleBlankLinesInARow
 				case "SA1507":
-					Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == e.LineNumber)].Item2.Trim()));
-					sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == e.LineNumber));
+					RemoveEmptyLine(sourceCode, e.LineNumber);
 					break;
 
 				//ClosingCurlyBracketsMustNotBePrecededByBlankLine
 				case "SA1508":
-					Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == e.LineNumber - 1)].Item2.Trim()));
-					sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == e.LineNumber - 1));
+					RemoveEmptyLine(sourceCode, e.LineNumber - 1);
 					break;
 
 				//CodeMustNotContainBlankLinesAtEndOfFile
 				case "SA1518":
-					Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == e.LineNumber)].Item2.Trim()));
-					sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == e.LineNumber));
+					RemoveEmptyLine(sourceCode, e.LineNumber);
 					break;
 
 				//OpeningCurlyBracketsMustNotBeFollowedByBlankLine
 				case "SA1505":
-					Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == e.LineNumber + 1)].Item2.Trim()));
-					sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == e.LineNumber + 1));
+					RemoveEmptyLine(sourceCode, e.LineNumber+1);
 					break;
 
 				//ClosingCurlyBracketMustBeFollowedByBlankLine
 				case "SA1513":
-					sourceCode.Insert(sourceCode.FindIndex(x => x.Item1 == e.LineNumber + 1), new Tuple<int, string>(-1, string.Empty));
+					AddEmptyLine(sourceCode, e.LineNumber + 1);
 					break;
 
 				//SingleLineCommentsMustBePrecededByBlankLine
 				case "SA1515":
-					sourceCode.Insert(sourceCode.FindIndex(x => x.Item1 == e.LineNumber), new Tuple<int, string>(-1, string.Empty));
+					AddEmptyLine(sourceCode, e.LineNumber);
 					break;
 
 				//ElementDocumentationHeadersMustBePrecededByBlankLine
 				case "SA1514":
-					sourceCode.Insert(sourceCode.FindIndex(x => x.Item1 == e.LineNumber), new Tuple<int, string>(-1, string.Empty));
+					AddEmptyLine(sourceCode, e.LineNumber);
 					break;
 
 				//SingleLineCommentsMustNotBeFollowedByBlankLine
 				case "SA1512":
-					Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == e.LineNumber + 1)].Item2.Trim()));
-					sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == e.LineNumber + 1));
+					RemoveEmptyLine(sourceCode, e.LineNumber + 1);
 					break;
 
 				//CodeMustNotContainBlankLinesAtStartOfFile
 				case "SA1517":
-					Debug.Assert(string.IsNullOrEmpty(sourceCode[sourceCode.FindIndex(x => x.Item1 == e.LineNumber)].Item2.Trim()));
-					sourceCode.RemoveAt(sourceCode.FindIndex(x => x.Item1 == e.LineNumber));
+					RemoveEmptyLine(sourceCode, e.LineNumber);
 					break;
 
 				default:
