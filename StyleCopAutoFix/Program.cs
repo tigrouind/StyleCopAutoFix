@@ -116,13 +116,17 @@ namespace StyleCopAutoFix
 		}
 
 		private static IEnumerable<string> GetCSharpFilesInProject(string filePath)
-		{
+		{			
 			string directoryName = Path.GetDirectoryName(filePath);
 			XDocument project = XDocument.Load(filePath);
-			return
+			XNamespace ns = XNamespace.Get(@"http://schemas.microsoft.com/developer/msbuild/2003");
+
+			return 
 			 from el in project.Root
-				 .Elements(XName.Get("ItemGroup", @"http://schemas.microsoft.com/developer/msbuild/2003"))
-				 .Elements(XName.Get("Compile", @"http://schemas.microsoft.com/developer/msbuild/2003"))
+				 .Elements(ns + "ItemGroup")
+				 .Elements(ns + "Compile")
+			 	 .Where(x => x.Element(ns + "ExcludeFromStyleCop") == null
+					       && x.Element(ns + "ExcludeFromSourceAnalysis") == null)		 
 			 select Path.Combine(directoryName, el.Attribute("Include").Value);
 		}
 
